@@ -3,6 +3,8 @@
 ## Acknowledgment
 This guide is the result of a long and complex troubleshooting process. The architecture of the Fibaro HC2 firmware is non-standard, distributing system files across multiple partitions and using symbolic links for critical configuration files like `/etc/passwd` and `/etc/shadow`. This guide documents the successful method to regain root access after many other standard approaches failed.
 
+**Note**: The Fibaro HC2 uses an internal USB drive for storage, not an mSATA SSD as some might expect.
+
 ## 1. Executive Summary
 The core challenge is that the HC2 firmware is designed to be immutable. Standard methods of editing the root filesystem fail because the critical password file (`/etc/shadow`) is actually a symbolic link pointing to a file on a separate hardware data partition (HwData). The solution involves cloning the original drive, mounting the specific hardware data partition, and modifying the real password file.
 
@@ -10,9 +12,8 @@ The core challenge is that the HC2 firmware is designed to be immutable. Standar
 
 ### Hardware:
 - A computer running a Linux environment (this guide uses an Ubuntu VM on Parallels).
-- The original mSATA SSD from the Fibaro HC2.
-- An adapter to connect the mSATA SSD to your computer (e.g., mSATA to USB).
-- A spare, compatible mSATA SSD to use as a working copy. This is highly recommended to avoid any risk to the original drive.
+- The original USB drive from the Fibaro HC2.
+- A spare, compatible USB drive to use as a working copy. This is highly recommended to avoid any risk to the original drive.
 
 ### Software:
 - A tool to perform a raw disk copy, like `dd`.
@@ -22,7 +23,7 @@ The core challenge is that the HC2 firmware is designed to be immutable. Standar
 ### Step 1: Full Raw Backup of the Original Drive
 This is the most critical step. It creates a perfect, bit-for-bit image of your original, working drive, ensuring you always have a safe fallback.
 
-1. Connect the original HC2 mSATA SSD to your computer.
+1. Connect the original HC2 USB drive to your computer.
 2. Identify the disk identifier (e.g., `/dev/sdb`, `/dev/sdc`). Use `lsblk` or `diskutil list` (on macOS).
 3. Use `dd` to create a raw image file. This example assumes the original disk is `/dev/sdb` and saves the backup to the Downloads folder.
 
@@ -34,9 +35,9 @@ sudo dd if=/dev/sdb of=~/Downloads/fibaro_hc2_original.img bs=4M status=progress
 You now have a safe backup image. Store it securely.
 
 ### Step 2: Create and Prepare the Working Copy
-To avoid any risk, all modifications will be performed on a separate, spare mSATA drive.
+To avoid any risk, all modifications will be performed on a separate, spare USB drive.
 
-1. Connect your spare mSATA SSD.
+1. Connect your spare USB drive.
 2. Identify its disk identifier (e.g., `/dev/sdc`).
 3. Restore the backup image you just created onto this spare drive.
 
@@ -50,7 +51,7 @@ You now have a working clone. All subsequent steps will be performed on this clo
 ### Step 3: Identify the Correct Partition and Modify the Password
 This is the core of the recovery. We discovered that the real password file is not in the main system partition but in a separate hardware data partition.
 
-1. Connect the cloned mSATA drive to your Ubuntu machine.
+1. Connect the cloned USB drive to your Ubuntu machine.
 2. Open a Terminal and list the partitions to identify the device name (e.g., `/dev/sdc`). The system will likely automount them.
 
 ```bash
@@ -92,7 +93,7 @@ root:NEW_HASH_STRING_YOU_PASTED:17280:0:99999:7:::
 ### Step 4: Finalize and Test
 
 1. Safely eject the cloned drive from your Ubuntu machine.
-2. Install the modified mSATA clone into your Fibaro HC2.
+2. Install the modified USB drive into your Fibaro HC2.
 3. Power on the HC2 and wait for it to boot completely.
 4. Find the device's IP address from your router.
 5. Attempt to connect via SSH. You may need to allow an older security algorithm.
@@ -109,7 +110,7 @@ You should now have successful root access to your Fibaro HC2. It is highly reco
 ## ⚠️ Important Warnings
 
 - **Always create a backup before starting**
-- **Use a spare mSATA drive for modifications**
+- **Use a spare USB drive for modifications**
 - **This process voids your warranty**
 - **Proceed at your own risk**
 
